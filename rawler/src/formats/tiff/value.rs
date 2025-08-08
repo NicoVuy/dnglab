@@ -779,13 +779,13 @@ impl Value {
 
   pub fn visual_rep(&self, limit: usize) -> String {
     match self {
-      Value::Byte(v) => v.iter().take(limit).map(|a| format!("{:X}", a)).collect::<Vec<String>>().join(" "),
+      Value::Byte(v) => v.iter().take(limit).map(|a| format!("{:02X}", a)).collect::<Vec<String>>().join(" "),
       Value::Short(v) => v.iter().take(limit).map(|a| format!("{}", a)).collect::<Vec<String>>().join(" "),
-      Value::Long(v) => v.iter().take(limit).map(|a| format!("{}", a)).collect::<Vec<String>>().join(" "),
+      Value::Long(v) => v.iter().take(limit).map(|a| format!("{:08X}", a)).collect::<Vec<String>>().join(" "),
       Value::Rational(v) => v.iter().take(limit).map(|a| format!("{}", a)).collect::<Vec<String>>().join(" "),
-      Value::SByte(v) => v.iter().take(limit).map(|a| format!("{}", a)).collect::<Vec<String>>().join(" "),
-      Value::SShort(v) => v.iter().take(limit).map(|a| format!("{}", a)).collect::<Vec<String>>().join(" "),
-      Value::SLong(v) => v.iter().take(limit).map(|a| format!("{}", a)).collect::<Vec<String>>().join(" "),
+      Value::SByte(v) => v.iter().take(limit).map(|a| format!("{:X}", a)).collect::<Vec<String>>().join(" "),
+      Value::SShort(v) => v.iter().take(limit).map(|a| format!("{:X}", a)).collect::<Vec<String>>().join(" "),
+      Value::SLong(v) => v.iter().take(limit).map(|a| format!("{:X}", a)).collect::<Vec<String>>().join(" "),
       Value::SRational(v) => v.iter().take(limit).map(|a| format!("{}", a)).collect::<Vec<String>>().join(" "),
       Value::Float(v) => v.iter().take(limit).map(|a| format!("{}", a)).collect::<Vec<String>>().join(" "),
       Value::Double(v) => v.iter().take(limit).map(|a| format!("{}", a)).collect::<Vec<String>>().join(" "),

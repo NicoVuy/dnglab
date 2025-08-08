@@ -74,7 +74,7 @@ impl<'a> ArwDecoder<'a> {
     }
     .ok_or("File has not makernotes")?;
 
-    //makernote.dump::<ExifTag>(0).iter().for_each(|line| eprintln!("DUMP: {}", line));
+    //makernote.dump::<ExifTag>(8).iter().for_each(|line| eprintln!("DUMP: {}", line));
 
     Ok(ArwDecoder {
       tiff,
@@ -228,7 +228,82 @@ impl<'a> Decoder for ArwDecoder<'a> {
 
   fn raw_metadata(&self, _file: &RawSource, _params: &RawDecodeParams) -> Result<RawMetadata> {
     let mut exif = Exif::new(self.tiff.root_ifd())?;
-    exif.extend_from_ifd(self.get_exif()?)?; // TODO: is this required?
+    exif.extend_from_ifd(self.get_exif()?)?;
+    if let Some(sequencenumber) = self.makernote.get_entry(ArwMakernoteTag::SonySequenceNumber) {
+      if let Ok(decoded) = sequencenumber.get_u16(0) {
+        exif.sequencenumber = decoded;
+      }
+    }
+    if let Some(focusmode) = self.makernote.get_entry(ArwMakernoteTag::SonyFocusMode) {
+      if let Ok(decoded) = focusmode.get_u8(0) {
+        exif.sonyfocusmode = decoded;
+      }
+    }
+    if let Some(focusarea) = self.makernote.get_entry(ArwMakernoteTag::SonyAFAreaModeSetting) {
+      if let Ok(decoded) = focusarea.get_u8(0) {
+        exif.sonyafarea = decoded;
+      }
+    }
+    if let Some(focusarea) = self.makernote.get_entry(ArwMakernoteTag::SonyFlexibleSpotPosition) {
+      if let Ok(x_res) = focusarea.get_u16(0) {
+        if let Ok(y_res) = focusarea.get_u16(1) {
+          if let Some(x) = x_res {
+            if let Some(y) = y_res {
+              exif.sonyflexiblespotposition = Some([x, y]);
+            }
+          }
+        }
+      }
+    }
+    if let Some(afpointselected) = self.makernote.get_entry(ArwMakernoteTag::SonyAFPointSelected) {
+      if let Ok(decoded) = afpointselected.get_u8(0) {
+        exif.sonyafpointselected = decoded;
+      }
+    }
+    if let Some(focuslocation) = self.makernote.get_entry(ArwMakernoteTag::SonyFocusLocation) {
+      if let Ok(width_res) = focuslocation.get_u16(0) {
+        if let Ok(height_res) = focuslocation.get_u16(1) {
+          if let Ok(x_res) = focuslocation.get_u16(2) {
+            if let Ok(y_res) = focuslocation.get_u16(3) {
+              if let Some(width) = width_res {
+                if let Some(height) = height_res {
+                  if let Some(x) = x_res {
+                    if let Some(y) = y_res {
+                      exif.sonyfocuslocation = Some([width, height, x, y]);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    if let Some(releasemode) = self.makernote.get_entry(ArwMakernoteTag::SonyReleaseMode) {
+      if let Ok(decoded) = releasemode.get_u8(0) {
+        exif.sonyreleasemode = decoded;
+      }
+    }
+    if let Some(exposuremode) = self.makernote.get_entry(ArwMakernoteTag::SonyExposureMode) {
+      if let Ok(decoded) = exposuremode.get_u8(0) {
+        exif.sonyexposuremode = decoded;
+      }
+    }
+    /*
+    let mut dbg = String::with_capacity(5000);
+    for tag in
+      //[
+      //  0x0010, 0x0020, 0x0114, 0x0116, 0x2010, 0x3000, 0x9050, 0x9400, 0x9401, 0x9402, 0x9403, 0x9404, 0x9405, 0x9406, 0x940C, 0x940E, 0x9416,
+      //]
+      0x000..0xb054
+    {
+      if let Some(dbgdata) = self.makernote.get_entry(tag) {
+        let msg = format!("\nTag {:04X} {} bytes : {}", tag, dbgdata.count(), dbgdata.visual_rep(1000));
+        dbg.push_str(&msg);
+      }
+    }
+    exif.dbg = dbg;*/
+
     let mdata = RawMetadata::new_with_lens(&self.camera, exif, self.get_lens_description()?.cloned());
     Ok(mdata)
   }
@@ -736,10 +811,98 @@ crate::tags::tiff_tag_enum!(ArwMakernoteTag);
 #[allow(non_camel_case_types)]
 pub enum ArwMakernoteTag {
   CameraInfo = 0x0010,
+  SonyMoreInfo = 0x0020,
   Tag_940C = 0x940C,
   Tag_9050 = 0x9050,
   Tag_9405 = 0x9405,
   Tag_9416 = 0x9416, // replaces 0x9405 for the Sony ILCE-7SM3, from July 2020
+  // Sony makernote tags from https://exiv2.org/tags-sony.html
+  SonyFlashExposureComp = 0x0104,
+  Sony1003 = 0x1003,
+  Sony2000 = 0x2000,
+  SonyRating = 0x2002,
+  Sony2003 = 0x2003,
+  SonyContrast = 0x2004,
+  SonySaturation = 0x2005,
+  SonySharpness = 0x2006,
+  SonyBrightness = 0x2007,
+  SonyLongExposureNoiseReduction = 0x2008,
+  SonyHighISONoiseReduction = 0x2009,
+  SonyAutoHDR = 0x200A,
+  SonyMultiFrameNoiseReduction = 0x200B,
+  Sony200D = 0x200d,
+  SonyPictureEffect = 0x200e,
+  SonySoftSkinEffect = 0x200f,
+  SonyShotInfo = 0x2010,
+  SonyVignettingCorrection = 0x2011,
+  SonyLateralChromaticAberration = 0x2012,
+  SonyDistortionCorrectionSetting = 0x2013,
+  SonyWBShiftABGL = 0x2014,
+  Sony2015 = 0x2015,
+  SonyAutoPortratiFramed = 0x2016,
+  SonyFlashAction = 0x2017,
+  Sony2018 = 0x2018,
+  Sony2019 = 0x2019,
+  SonyElectronicFrontCurtainShutter = 0x201a,
+  SonyFocusMode = 0x201b,
+  SonyAFAreaModeSetting = 0x201c,
+  SonyFlexibleSpotPosition = 0x201d,
+  SonyAFPointSelected = 0x201e,
+  Sony201F = 0x201f,
+  SonyAFPointsUsed = 0x2020,
+  SonyAFTracking = 0x2021,
+  SonyMultiFrameNREffect = 0x2023,
+  Sony2025 = 0x2025,
+  SonyWBShiftABGMPrecise = 0x2026,
+  SonyFocusLocation = 0x2027,
+  SonyVariableLowPassFilter = 0x2028,
+  SonyRAWFileType = 0x2029,
+  Sony202A = 0x202a,
+  SonyPrioritySetInAWB = 0x202b,
+  SonyMeteringMode2 = 0x202c,
+  SonyExposerStandardAdjustment = 0x202d,
+  SonyQuality2 = 0x202e,
+  SonyPixelShiftInfo = 0x202f,
+  SonyShadows = 0x2032,
+  SonyHighlights = 0x2033,
+  SonyFade = 0x2034,
+  SonySharpnessRange = 0x2035,
+  SonyClarity = 0x2036,
+  SonyFocusFrameSize = 0x2037,
+  Sony2038 = 0x2038,
+  SonyJPEGHEIFSwitch = 0x2039,
+  SonySequenceId1 = 0x203D,
+  SonySequenceId2 = 0x203F,
+  SonyFocusLocation2 = 0x204A,
+  Sony5001 = 0x5001,
+  Sony5002 = 0x5002,
+  SonyFileFormat = 0xb000,
+  SonyModelID = 0xb001,
+  SonyCreativeStyle = 0xb020,
+  SonyColorTemp = 0xb021,
+  SonyColorCompensationFilter = 0xb022,
+  SonySceneMode = 0xb023,
+  SonyZoneMatching = 0xb024,
+  SonyDynamicRangeOptimizer = 0xb025,
+  SonyImageStabilization = 0xb026,
+  SonyLensID = 0xb027,
+  SonyColorMode = 0xb029,
+  SonyLensSpec = 0xb02a,
+  SonyFullImageSize = 0xb02b,
+  SonyPreviewImageSize = 0xb02c,
+  SonyExposureMode = 0xb041,
+  Sonyb045 = 0xb045,
+  Sonyb046 = 0xb046,
+  SonyFlashLevel = 0xb048,
+  SonyReleaseMode = 0xb049,
+  SonySequenceNumber = 0xb04a,
+  SonyAntiBlur = 0xb04b,
+  SonySequenceImageNumber = 0xb04c,
+  Sonyb04D,
+  SonyDynamicRangeOptimizer2 = 0xb04f,
+  SonyHighISONoiseReduction2 = 0xb050,
+  SonyIntelligentAuto = 0xb052,
+  SonyWhiteBalance2 = 0xb054,
 }
 
 /// Decipher/encipher Sony tag 0x2010, 0x900b, 0x9050 and 0x940x data

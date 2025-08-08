@@ -529,10 +529,13 @@ pub fn decode_16le(buf: &[u8], width: usize, height: usize, dummy: bool) -> PixU
     height,
     dummy,
     &(|out: &mut [u16], row| {
-      let inb = &buf[(row * width * 2)..];
+      let start = row * width * 2;
+      if start <= buf.len() {
+        let inb = &buf[start..];
 
-      for (i, bytes) in (0..width).zip(inb.chunks_exact(2)) {
-        out[i] = LEu16(bytes, 0);
+        for (i, bytes) in (0..width).zip(inb.chunks_exact(2)) {
+          out[i] = LEu16(bytes, 0);
+        }
       }
     }),
   )

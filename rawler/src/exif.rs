@@ -13,6 +13,17 @@ use std::convert::TryInto;
 /// the best accuracy is choosen.
 #[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Exif {
+  pub dbg: String,
+  pub sequencenumber: Option<u16>,
+  pub sonyfocusmode: Option<u8>,
+  pub sonyafarea: Option<u8>,
+  pub sonyflexiblespotposition: Option<[u16; 2]>,
+  pub sonyafpointselected: Option<u8>,
+  pub sonyfocuslocation: Option<[u16; 4]>,
+  pub sonyreleasemode: Option<u8>,
+  pub sonyexposuremode: Option<u8>,
+  pub width: Option<u32>,
+  pub height: Option<u32>,
   pub orientation: Option<u16>,
   pub copyright: Option<String>,
   pub artist: Option<String>,
@@ -121,6 +132,8 @@ impl Exif {
       // First try EXIF tags
       if let Ok(tag) = ExifTag::try_from(*tag) {
         match (tag, &entry.value) {
+          (ExifTag::ExifImageWidth, Value::Long(data)) => self.width = data.get(0).cloned(),
+          (ExifTag::ExifImageHeight, Value::Long(data)) => self.height = data.get(0).cloned(),
           (ExifTag::Orientation, Value::Short(data)) => self.orientation = data.get(0).cloned(),
           (ExifTag::Copyright, Value::Ascii(data)) => self.copyright = data.strings().get(0).map(trim),
           (ExifTag::Artist, Value::Ascii(data)) => self.artist = data.strings().get(0).map(trim),
@@ -164,6 +177,7 @@ impl Exif {
           (ExifTag::UserComment, Value::Ascii(data)) => self.user_comment = data.strings().get(0).map(trim),
           //(ExifTag::MakerNotes, Value::Undefined(data)) => self.makernotes = Some(data.clone()),
           (tag, _value) => {
+            //println!("Ignoring EXIF tag: {:?} {:?}", tag, value);
             log::debug!("Ignoring EXIF tag: {:?}", tag);
           }
         }
